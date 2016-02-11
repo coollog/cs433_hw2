@@ -90,7 +90,7 @@ public class PingServer {
     String replyLine = "PINGECHO " + seqNum + " " + sendTime + " " + passwd + " \r\n";
 
     // Send the reply.
-    byte[] sendData = replyLine.getBytes();
+    byte[] sendData = replyLine.getBytes("UTF-8");
     DatagramPacket reply = new DatagramPacket(sendData, sendData.length,
                                               clientHost, clientPort);
     socket.send(reply);
@@ -119,7 +119,7 @@ public class PingServer {
     // so read this line.
     String line = br.readLine();
 
-    return line;
+    return new String(line, "UTF-8");
   }
 
   /*

@@ -57,7 +57,7 @@ public class PingClient {
     String msg = "PING " + SEQNUM + " " + sendTime + " " + PASSWD + " \r\n";
 
     // Construct and send datagram.
-    byte[] sendData = msg.getBytes();
+    byte[] sendData = msg.getBytes("UTF-8");
     DatagramPacket sendPacket = new DatagramPacket(sendData,
                                                    sendData.length,
                                                    serverIPAddress,
@@ -67,7 +67,7 @@ public class PingClient {
     // Receive datagram.
     byte[] receiveData = new byte[1024];
     DatagramPacket receivePacket = new DatagramPacket(receiveData,
-          receiveData.length);
+                                                      receiveData.length);
     clientSocket.setSoTimeout(1000);
     try {
       clientSocket.receive(receivePacket);
@@ -89,8 +89,8 @@ public class PingClient {
     RTT_N ++;
 
     // Print output.
-    String sentenceFromServer = new String(receivePacket.getData());
-    System.out.println("From Server: " + sentenceFromServer);
+    String sentenceFromServer = new String(receivePacket.getData(), "UTF-8");
+    System.out.print("From Server: " + sentenceFromServer);
   }
 
 } // end of UDPClient
