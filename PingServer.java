@@ -107,7 +107,7 @@ public class PingServer {
     // stream reader, so you can read the data as a
     // stream of **characters**: reader/writer handles
     // characters
-    InputStreamReader isr = new InputStreamReader(bais);
+    InputStreamReader isr = new InputStreamReader(bais, "UTF8");
 
     // Wrap the input stream reader in a bufferred reader,
     // so you can read the character data a line at a time.
@@ -119,7 +119,7 @@ public class PingServer {
     // so read this line.
     String line = br.readLine();
 
-    return new String(line, "UTF-8");
+    return line;
   }
 
   /*
