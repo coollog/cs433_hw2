@@ -2,9 +2,10 @@
 // usage: java PingClient host port passwd
 import java.io.*;
 import java.net.*;
+import java.nio.*;
 
 public class PingClient {
-  private static int SEQNUM = 0;
+  private static short SEQNUM = 0;
   private static String PASSWD;
 
   private static long RTT_MIN = Long.MAX_VALUE;
@@ -50,14 +51,20 @@ public class PingClient {
   private static void pingServer(DatagramSocket clientSocket,
                                  InetAddress serverIPAddress,
                                  int serverPort) throws Exception {
+    long sendTime = System.currentTimeMillis();
+
     // Build message:
     // PING sequence_number client_send_time passwd CRLF
-    String seqNum = String.format("%02d", SEQNUM);
-    long sendTime = System.currentTimeMillis();
-    String msg = "PING " + SEQNUM + " " + sendTime + " " + PASSWD + " \r\n";
+    ByteBuffer sendBuffer = ByteBuffer.allocate(20 + PASSWD.length());
+    sendBuffer.put("PING ".getBytes("US-ASCII"));
+    sendBuffer.putShort(SEQNUM);
+    sendBuffer.put((byte)' ');
+    sendBuffer.putLong(sendTime);
+    sendBuffer.put((byte)' ');
+    sendBuffer.put(new String(PASSWD + " \r\n").getBytes("US-ASCII"));
 
     // Construct and send datagram.
-    byte[] sendData = msg.getBytes("UTF-8");
+    byte[] sendData = sendBuffer.array();
     DatagramPacket sendPacket = new DatagramPacket(sendData,
                                                    sendData.length,
                                                    serverIPAddress,
@@ -72,7 +79,7 @@ public class PingClient {
     try {
       clientSocket.receive(receivePacket);
     } catch (SocketTimeoutException e) {
-      System.out.println("Server response timeout: " + seqNum + ".");
+      System.out.println("Server response timeout: " + SEQNUM + ".");
       LOSS_COUNT ++;
       return;
     }
@@ -91,6 +98,18 @@ public class PingClient {
     // Print output.
     String sentenceFromServer = new String(receivePacket.getData(), "UTF-8");
     System.out.print("From Server: " + sentenceFromServer);
+  }
+
+  private static byte[] shortToBytes(short x) {
+    ByteBuffer buffer = ByteBuffer.allocate(Short.SIZE/Byte.SIZE);
+    buffer.putShort(x);
+    return buffer.array();
+  }
+
+  private static byte[] longToBytes(long x) {
+    ByteBuffer buffer = ByteBuffer.allocate(Long.SIZE/Byte.SIZE);
+    buffer.putLong(x);
+    return buffer.array();
   }
 
 } // end of UDPClient

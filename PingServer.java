@@ -2,6 +2,7 @@
 // usage: java PingServer port passwd [-delay delay] [-loss loss]
 import java.io.*;
 import java.net.*;
+import java.nio.*;
 import java.util.*;
 
 /*
@@ -65,32 +66,45 @@ public class PingServer {
     InetAddress clientHost = request.getAddress();
     int clientPort = request.getPort();
 
-    // Read line from received data and split into tokens.
-    byte[] buf = request.getData();
-    String line = getLineFromByteArray(buf);
-    String[] tokens = line.split("\\s+");
+    // Read data from received data.
+    ByteBuffer requestData = ByteBuffer.wrap(request.getData());
+    byte[] messageNameBytes = new byte[4];
+    byte[] passwdBytes = new byte[PASSWD.length()];
+    requestData.get(messageNameBytes);
+    requestData.get();
+    short seqNum = requestData.getShort();
+    requestData.get();
+    long sendTime = requestData.getLong();
+    requestData.get();
+    requestData.get(passwdBytes);
+    String messageName = new String(messageNameBytes, "US-ASCII");
+    String passwd = new String(passwdBytes, "US-ASCII");
 
     // Make sure is PING message:
     // PING sequence_number client_send_time passwd CRLF
-    if (!tokens[0].equals("PING") || tokens.length != 4) {
+    if (!(messageName.equals("PING"))) {
       return false;
     }
-
-    String seqNum = tokens[1];
-    String sendTime = tokens[2];
-    String passwd = tokens[3];
 
     // Make sure passwd is correct.
-    if (!passwd.equals(PASSWD)) {
+    if (!(passwd.equals(PASSWD))) {
       return false;
     }
+
+    System.out.println("Responding to: " + seqNum + " sent at " + sendTime);
 
     // Build the response:
     // PINGECHO sequence_number client_send_time passwd CRLF
-    String replyLine = "PINGECHO " + seqNum + " " + sendTime + " " + passwd + " \r\n";
+    ByteBuffer replyBuffer = ByteBuffer.allocate(24 + PASSWD.length());
+    replyBuffer.put("PINGECHO ".getBytes("US-ASCII"));
+    replyBuffer.putShort(seqNum);
+    replyBuffer.put((byte)' ');
+    replyBuffer.putLong(sendTime);
+    replyBuffer.put((byte)' ');
+    replyBuffer.put(new String(passwd + " \r\n").getBytes("US-ASCII"));
 
     // Send the reply.
-    byte[] sendData = replyLine.getBytes("UTF-8");
+    byte[] sendData = replyBuffer.array();
     DatagramPacket reply = new DatagramPacket(sendData, sendData.length,
                                               clientHost, clientPort);
     socket.send(reply);
@@ -179,5 +193,19 @@ public class PingServer {
     PASSWD = args[1];
 
     return true;
+  }
+
+  private static short bytesToShort(byte[] bytes) {
+    ByteBuffer buffer = ByteBuffer.allocate(Short.SIZE/Byte.SIZE);
+    buffer.put(bytes);
+    buffer.flip();//need flip
+    return buffer.getShort();
+  }
+
+  private static long bytesToLong(byte[] bytes) {
+    ByteBuffer buffer = ByteBuffer.allocate(Long.SIZE/Byte.SIZE);
+    buffer.put(bytes);
+    buffer.flip();//need flip
+    return buffer.getLong();
   }
 } // end of class
